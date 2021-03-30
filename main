@@ -1,0 +1,74 @@
+from __future__ import unicode_literals
+import youtube_dl
+import numpy as np
+import pandas as pd
+import re
+import datetime
+import glob
+
+
+temp_time = []
+temp_text = []
+abzac = ''
+n = 0
+
+ydl_opts = {
+#'format': 'bestaudio/best',
+#'verbose': True,
+'skip_download': True,
+'writesubtitles': True,
+'allsubtitles': True,
+#'writeautomaticsub': True,
+#'subtitleslangs': 'en',
+#'subtitle': '--write-auto-sub',
+}
+url = input("Enter your URL of YouTube video: ")
+with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+    ydl.download([url])
+print("Download Successful!")
+
+
+pattern = r"\d{2}:\d{2}:\d{2}.\d{3}"
+path_file = glob.glob('/*/*.en.vtt')
+
+full_sub = pd.read_table(path_file[0], header=None)
+frame = pd.DataFrame(columns=['time', 'text', 'seconds'])
+
+while re.search(pattern, full_sub[0][n]) == None:
+  n += 1
+
+temp_time.append(re.search(pattern, full_sub[0][n])[0])
+n += 1
+
+for i in range(n, len(full_sub)):
+  if re.search(pattern, full_sub[0][i]) == None:
+    abzac += full_sub[0][i] + ' '
+    if i + 1 == len(full_sub): temp_text.append(abzac)
+
+  else:   
+    temp_text.append(abzac)
+    abzac = ''
+    temp_time.append(re.search(pattern, full_sub[0][i])[0])
+#print(temp_text)
+#print(temp_time)
+
+frame['time'] = temp_time
+frame['text'] = temp_text
+#print(frame)
+
+text_to_find = input('Input what do you want to find: ')
+
+result_of_search = frame[frame['text'].str.contains(text_to_find)]
+#print(result_of_search)
+#print(result_of_search['time'])
+#result_of_search['time'] = pd.to_datetime(result_of_search['time'], format='%H:%M:%S.%f')
+result_of_search['time'] = pd.to_timedelta(result_of_search['time'])
+result_of_search['seconds'] = result_of_search['time'].apply(lambda x: str(x.seconds))
+
+
+
+#print(result_of_search['seconds'].apply(lambda x: url + '&start=' + x))
+result_of_search['seconds'] = result_of_search['seconds'].apply(lambda x: url + '&start=' + x)
+print(result_of_search.values)
+
+# https://www.youtube.com/watch?v=4LxwbPFLUHY
